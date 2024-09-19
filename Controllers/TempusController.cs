@@ -25,6 +25,18 @@ namespace tempus.service.core.api.Controllers
             return Ok(response);
         }
 
+        //public async Task<CorcentricTempusPaymentResponse> PaymentCorcentricTempusMethods_Select(CorcentricTempusPaymentRequest tempusReq)
+
+        [HttpPost]
+        [Route("api/tempus/pay/corcentric")]
+        [SwaggerOperation(OperationId = "PaymentCorcentricTempusMethods_Select")]
+        [SwaggerResponse(statusCode: 200, type: typeof(CorcentricTempusPaymentResponse), description: "Used to call Tempus for corcentric sale")]
+        public async Task<IActionResult> PaymentCorcentricTempusMethods_Select([FromBody] CorcentricTempusPaymentRequest order)
+        {
+            var response = await service.PaymentCorcentricTempusMethods_Select(order);
+            return Ok(response);
+        }
+
         [HttpGet]
         [Route("api/tempus/location/list")]
         [SwaggerOperation(OperationId = "GetLocations")]

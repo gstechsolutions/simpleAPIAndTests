@@ -1,9 +1,10 @@
 ﻿using System.Xml.Serialization;
+using tempus.service.core.api.Models.Abstract;
 
 namespace tempus.service.core.api.Models.POSTempus
 {
     [XmlRoot("TTMESSAGE")]
-    public class PaymentTempusMethodResponse
+    public class PaymentTempusMethodResponse : TempusPaymentResponse
     {
         [XmlElement("TTMSGTRANSUCCESS")]
         public string TTMSGTRANSUCCESS { get; set; } = string.Empty;
@@ -31,6 +32,7 @@ namespace tempus.service.core.api.Models.POSTempus
 
         [XmlElement("SESSIONID")]
         public string SESSIONID { get; set; } = string.Empty;
+
     }
 
     public class TRANRESP
