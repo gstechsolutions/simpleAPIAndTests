@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using tempus.service.core.api.Data.Entities;
+using tempus.service.core.api.Models;
 using tempus.service.core.api.Models.POSTempus;
 
 namespace tempus.service.core.api.ConfigurationModel
@@ -16,6 +17,9 @@ namespace tempus.service.core.api.ConfigurationModel
         {
             this.CreateMap<Location, LocationModel>()
                 .ReverseMap();
+
+            this.CreateMap<PosInvoice, PosInvoiceModel>()
+                ;
         }
     }
 }

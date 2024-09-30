@@ -1,6 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using tempus.service.core.api.Data.Entities;
+using tempus.service.core.api.Models;
 using tempus.service.core.api.Services;
 
 namespace tempus.service.core.api.Data
@@ -30,5 +31,7 @@ namespace tempus.service.core.api.Data
         }
 
         public DbSet<Location> Locations { get; set; }
+
+        public DbSet<PosInvoice> POSInvoices { get; set; }
     }
 }

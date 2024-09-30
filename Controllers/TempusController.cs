@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using tempus.service.core.api.Models;
 using tempus.service.core.api.Models.POSTempus;
 using tempus.service.core.api.Services.POSTempus;
 
@@ -45,6 +46,26 @@ namespace tempus.service.core.api.Controllers
         {
             var list = await service.GetLocations();
             return Ok(list);
+        }
+
+        [HttpPost]
+        [Route("api/tempus/invoice")]
+        [SwaggerOperation(OperationId = "GetPosInvoices")]
+        [SwaggerResponse(statusCode: 200, type: typeof(List<PosInvoiceModel>), description: "Used to call Tempus for corcentric sale")]
+        public async Task<IActionResult> GetPosInvoices([FromBody] PosFiltersModel invoice)
+        {
+            var response = await service.GetPosInvoices(invoice);
+            return Ok(response);
+        }
+
+        [HttpPost]
+        [Route("api/tempus/pay/credit")]
+        [SwaggerOperation(OperationId = "PaymentCreditTempusMethods_Select")]
+        [SwaggerResponse(statusCode: 200, type: typeof(PaymentTempusMethodResponse), description: "Used to call Tempus for credit sale")]
+        public async Task<IActionResult> PaymentCreditTempusMethods_Select([FromBody] PaymentTempusMethodRequest order)
+        {
+            var response = await service.PaymentCreditTempusMethods_Select(order);
+            return Ok(response);
         }
     }
 }

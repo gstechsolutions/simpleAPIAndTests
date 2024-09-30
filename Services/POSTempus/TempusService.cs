@@ -12,6 +12,8 @@ using tempus.service.core.api.Data;
 using Microsoft.EntityFrameworkCore;
 using tempus.service.core.api.Data.Entities;
 using System.Drawing;
+using tempus.service.core.api.Models;
+using Microsoft.Data.SqlClient;
 
 namespace tempus.service.core.api.Services.POSTempus
 {
@@ -215,8 +217,8 @@ namespace tempus.service.core.api.Services.POSTempus
                    .ToList();
 
                     // Create a bitmap to draw the signature
-                    int width = points.Max(p => p.X) + 10;  // Adding some margin
-                    int height = points.Max(p => p.Y) + 10; // Adding some margin
+                    int width = points.Max(p => p.X) + 20;  // Adding some margin
+                    int height = points.Max(p => p.Y) + 20; // Adding some margin
                     Bitmap bmp = new Bitmap(width, height);
 
                     // Draw on the bitmap
@@ -287,8 +289,92 @@ namespace tempus.service.core.api.Services.POSTempus
                 serializer.Serialize(xmlWriter, obj);
                 return stringWriter.ToString();
             }
-        }        
-        
+        }
+
+        public async Task<List<PosInvoiceModel>> GetPosInvoices(PosFiltersModel filters)
+        {
+            var functionName = "GetPosInvoices";
+            var invoices = new List<PosInvoiceModel>();            
+
+            try
+            {
+                var list = await context.POSInvoices.FromSqlRaw("EXEC [dbo].[POSInvoice_Select] @InvoiceNumber",
+                        new SqlParameter("@InvoiceNumber", filters.SalesNo)).ToListAsync();
+
+                invoices = this.mapper.Map<List<PosInvoice>, List<PosInvoiceModel>>(list);
+           
+
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+                }
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return invoices;
+        }
+
+        public async Task<PaymentTempusMethodResponse> PaymentCreditTempusMethods_Select(PaymentTempusMethodRequest tempusReq)
+        {
+            var tempusResponse = new PaymentTempusMethodResponse();
+            var functionName = "PaymentCreditTempusMethods_Select";
+
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    // Serialize the object to XML
+                    string payload = SerializeToXml(tempusReq);
+
+                    XDocument document = XDocument.Parse(payload);
+                    var rootElements = document.Root.Elements();
+                    XDocument newDoc = new XDocument(new XElement("TTMESSAGE", rootElements));
+                    payload = newDoc.ToString();
+
+                    // Create the request content
+                    var content = new StringContent(payload, Encoding.UTF8, "application/xml");
+
+                    // Send the POST request
+                    var response = await client.PostAsync(this.settings.Value.TempusUri, content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Read response as string
+                        var responseString = await response.Content.ReadAsStringAsync();
+
+                        // Deserialize the XML response into the C# class
+                        var serializer = new XmlSerializer(typeof(PaymentTempusMethodResponse));
+                        using (var reader = new StringReader(responseString))
+                        {
+                            tempusResponse = (PaymentTempusMethodResponse)serializer.Deserialize(reader);
+
+                            //if error then don't Generate the signature
+                            //if (tempusResponse != null && tempusResponse.TRANRESP != null && !string.IsNullOrEmpty(tempusResponse.TRANRESP.SIGDATA))
+                            //{
+                            //    tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
+                            //}
+                        }
+                    }
+                    else
+                    {
+                        this.logger.LogError($"{functionName} ERROR - {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {response.StatusCode}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                }
+            }
+
+            return tempusResponse;
+        }
     }
 
 }
