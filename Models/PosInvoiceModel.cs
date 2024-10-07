@@ -1,6 +1,6 @@
 ﻿namespace tempus.service.core.api.Models
 {
-    public class PosInvoiceModel
+    public class PosInvoiceModel : BaseModel
     {
         public long SalesId { get; set; }
         public string SalesNo { get; set; }
@@ -15,5 +15,14 @@
         public decimal Freight { get; set; }
         public int CustomerTaxRate { get; set; }
         public int ItemTaxAmount { get; set; }
+
+
+   
+
+
+        public decimal Labor { get; set; }
+        //public int Labor { get; set; }
+
+      
     }
 }

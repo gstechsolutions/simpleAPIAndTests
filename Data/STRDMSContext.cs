@@ -33,5 +33,7 @@ namespace tempus.service.core.api.Data
         public DbSet<Location> Locations { get; set; }
 
         public DbSet<PosInvoice> POSInvoices { get; set; }
+
+        public DbSet<SISPosInvoice> SISPOSInvoices { get; set; }
     }
 }

@@ -20,6 +20,12 @@ namespace tempus.service.core.api.ConfigurationModel
 
             this.CreateMap<PosInvoice, PosInvoiceModel>()
                 ;
+
+            this.CreateMap<SISPosInvoice, SISPosInvoiceModel>()
+                ;
+
+            this.CreateMap<SISPosInvoice, PosInvoiceModel>()
+                ;
         }
     }
 }

@@ -63,6 +63,8 @@
         public int INTERACTIVETIMEOUT { get; set; }
 
         public string ENCODING { get; set; } = string.Empty;
+
+        public string CCAUTHTYPE { get; set; }
     }
 
     public class LINEITEMS

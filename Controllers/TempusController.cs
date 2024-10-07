@@ -54,7 +54,17 @@ namespace tempus.service.core.api.Controllers
         [SwaggerResponse(statusCode: 200, type: typeof(List<PosInvoiceModel>), description: "Used to call Tempus for corcentric sale")]
         public async Task<IActionResult> GetPosInvoices([FromBody] PosFiltersModel invoice)
         {
-            var response = await service.GetPosInvoices(invoice);
+            var response = await service.GetSIPPosInvoices(invoice);
+            return Ok(response);
+        }
+
+        [HttpPost]
+        [Route("api/tempus/invoice/sis")]
+        [SwaggerOperation(OperationId = "GetSISPosInvoices")]
+        [SwaggerResponse(statusCode: 200, type: typeof(List<SISPosInvoiceModel>), description: "Used to call Tempus for corcentric sale")]
+        public async Task<IActionResult> GetSISPosInvoices([FromBody] PosFiltersModel invoice)
+        {
+            var response = await service.GetSISPosInvoices(invoice);
             return Ok(response);
         }
 

@@ -15,7 +15,9 @@ namespace tempus.service.core.api.Services.POSTempus
 
         Task<List<LocationModel>> GetLocations();
 
-        Task<List<PosInvoiceModel>> GetPosInvoices(PosFiltersModel filters);
+        Task<List<PosInvoiceModel>> GetSIPPosInvoices(PosFiltersModel filters);
+
+        Task<List<SISPosInvoiceModel>> GetSISPosInvoices(PosFiltersModel filters);
 
         //this is the one use for credut auth sales
         Task<PaymentTempusMethodResponse> PaymentCreditTempusMethods_Select(PaymentTempusMethodRequest tempusReq);

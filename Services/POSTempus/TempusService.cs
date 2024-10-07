@@ -45,28 +45,32 @@ namespace tempus.service.core.api.Services.POSTempus
         public async Task<List<LocationModel>> GetLocations()
         {
             var functionName = "GetLocations";
-            var locations = new List<LocationModel>();
+            var locationsList = new List<LocationModel>();
             var cacheKey = $"LocationList";
 
             try
             {
-                if (!cache.TryGetValue(cacheKey, out locations))
+                if (!cache.TryGetValue(cacheKey, out locationsList))
                 {
                     var dbList = await this.context.Locations
                         .Where(loc => loc.Active != null && (bool)loc.Active)
                         .ToListAsync();
 
-                    locations = this.mapper.Map<List<Location>, List<LocationModel>>(dbList)
+                    locationsList = this.mapper.Map<List<Location>, List<LocationModel>>(dbList)
                         .OrderBy(loc => loc.LocationName)
                         .ToList();
 
                     //Put the list in cache for an hour
-                    cache.Set(cacheKey, locations, TimeSpan.FromHours(12));
+                    cache.Set(cacheKey, locationsList, TimeSpan.FromHours(12));
                 }
 
             }
             catch (Exception ex)
             {
+                var error = new LocationModel();
+                error.SetError(ex.Message);
+                locationsList = new List<LocationModel>();
+                locationsList.Add(error);
                 this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
                 if (ex.InnerException != null)
                 {
@@ -78,7 +82,7 @@ namespace tempus.service.core.api.Services.POSTempus
                 this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
             }
 
-            return locations;
+            return locationsList;
 
         }
 
@@ -291,22 +295,58 @@ namespace tempus.service.core.api.Services.POSTempus
             }
         }
 
-        public async Task<List<PosInvoiceModel>> GetPosInvoices(PosFiltersModel filters)
+        public async Task<List<PosInvoiceModel>> GetSIPPosInvoices(PosFiltersModel filters)
         {
             var functionName = "GetPosInvoices";
-            var invoices = new List<PosInvoiceModel>();            
+            var invoices = new List<PosInvoiceModel>();
+            var sisInvoices = new List<SISPosInvoiceModel>();
 
             try
             {
                 var list = await context.POSInvoices.FromSqlRaw("EXEC [dbo].[POSInvoice_Select] @InvoiceNumber",
-                        new SqlParameter("@InvoiceNumber", filters.SalesNo)).ToListAsync();
+                          new SqlParameter("@InvoiceNumber", filters.SalesNo)).ToListAsync();
 
                 invoices = this.mapper.Map<List<PosInvoice>, List<PosInvoiceModel>>(list);
-           
 
             }
             catch (Exception ex)
             {
+                var error = new PosInvoiceModel();
+                error.SetError(ex.Message);
+                invoices.Add(error);
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+                }
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return invoices;
+        }
+
+        public async Task<List<SISPosInvoiceModel>> GetSISPosInvoices(PosFiltersModel filters)
+        {
+            var functionName = "GetSISPosInvoices";
+            var invoices = new List<SISPosInvoiceModel>();
+            
+
+            try
+            {
+                var list = await context.SISPOSInvoices.FromSqlRaw("EXEC [dbo].[POSInvoice_Select] @InvoiceNumber",
+                          new SqlParameter("@InvoiceNumber", filters.SalesNo)).ToListAsync();
+
+                invoices = this.mapper.Map<List<SISPosInvoice>, List<SISPosInvoiceModel>>(list);
+
+            }
+            catch (Exception ex)
+            {
+                var error = new SISPosInvoiceModel();
+                error.SetError(ex.Message);
+                invoices.Add(error);
                 this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
                 if (ex.InnerException != null)
                 {
@@ -354,12 +394,6 @@ namespace tempus.service.core.api.Services.POSTempus
                         using (var reader = new StringReader(responseString))
                         {
                             tempusResponse = (PaymentTempusMethodResponse)serializer.Deserialize(reader);
-
-                            //if error then don't Generate the signature
-                            //if (tempusResponse != null && tempusResponse.TRANRESP != null && !string.IsNullOrEmpty(tempusResponse.TRANRESP.SIGDATA))
-                            //{
-                            //    tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
-                            //}
                         }
                     }
                     else
