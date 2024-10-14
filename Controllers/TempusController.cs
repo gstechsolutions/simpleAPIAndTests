@@ -77,5 +77,25 @@ namespace tempus.service.core.api.Controllers
             var response = await service.PaymentCreditTempusMethods_Select(order);
             return Ok(response);
         }
+
+        [HttpPost]
+        [Route("api/tempus/cancel")]
+        [SwaggerOperation(OperationId = "InteractiveCancelTempusMethods_Select")]
+        [SwaggerResponse(statusCode: 200, type: typeof(InteractiveCancelTempusResponse), description: "Used to call Tempus to cancel request")]
+        public async Task<IActionResult> InteractiveCancelTempusMethods_Select([FromBody] InteractiveCancelTempusRequest order)
+        {
+            var response = await service.InteractiveCancelTempusMethods_Select(order);
+            return Ok(response);
+        }
+
+        [HttpPost]
+        [Route("api/tempus/http/cancel")]
+        [SwaggerOperation(OperationId = "CancelHttpClientRequest")]
+        [SwaggerResponse(statusCode: 200, type: typeof(PosFiltersModel), description: "Used to call Tempus to cancel request")]
+        public async Task<IActionResult> CancelHttpClientRequest([FromBody] PosFiltersModel filter)
+        {
+            var response = await service.CancelHttpClientRequest(filter);
+            return Ok(response);
+        }
     }
 }

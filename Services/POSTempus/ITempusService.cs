@@ -1,6 +1,7 @@
 ﻿using tempus.service.core.api.Models.POSTempus;
 using System.Drawing;
 using tempus.service.core.api.Models;
+using System.Threading;
 
 
 namespace tempus.service.core.api.Services.POSTempus
@@ -21,5 +22,9 @@ namespace tempus.service.core.api.Services.POSTempus
 
         //this is the one use for credut auth sales
         Task<PaymentTempusMethodResponse> PaymentCreditTempusMethods_Select(PaymentTempusMethodRequest tempusReq);
+
+        Task<InteractiveCancelTempusResponse> InteractiveCancelTempusMethods_Select(InteractiveCancelTempusRequest tempusReq);
+
+        Task<PosFiltersModel> CancelHttpClientRequest(PosFiltersModel filters);
     }
 }

@@ -25,7 +25,7 @@ namespace tempus.service.core.api.Services.POSTempus
         private readonly IMapper mapper;
         private readonly IOptions<ServiceCoreSettings> settings;
         private readonly IClock clock;
-        private readonly IMemoryCache cache;
+        private readonly IMemoryCache cache;        
 
         public TempusService(STRDMSContext context,
             ILogger<TempusService> logger,
@@ -137,20 +137,36 @@ namespace tempus.service.core.api.Services.POSTempus
                 {
                     this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
                 }
+                finally
+                {
+                    this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+                }
             }
 
             return tempusResponse;
         }
 
+
         public async Task<CorcentricTempusPaymentResponse> PaymentCorcentricTempusMethods_Select(CorcentricTempusPaymentRequest tempusReq)
         {
             var tempusResponse = new CorcentricTempusPaymentResponse();
             var functionName = "PaymentCorcentricTempusMethods_Select";
+            var cacheKey = "SignatureCancellationTokenList";
+            var tokenCancellationList = new List<SignatureTokenCancellation>();
+            var tokenToCancel = new SignatureTokenCancellation();
+
+            //var cancellationToken = tempusReq.CancellationToken?.Token ?? CancellationToken.None;
 
             using (var client = new HttpClient())
             {
                 try
                 {
+                    tokenCancellationList = SetTokenCachedList(tempusReq, cacheKey);
+                    if (tokenCancellationList != null && tokenCancellationList.Count > 0)
+                    {
+                        tokenToCancel = tokenCancellationList.Find(t => t.SubscriberKey == tempusReq.AUTHINFO.SUBSCRIBERKEY);
+                    }
+
                     // Serialize the object to XML
                     string payload = SerializeToXml(tempusReq);
 
@@ -163,7 +179,7 @@ namespace tempus.service.core.api.Services.POSTempus
                     var content = new StringContent(payload, Encoding.UTF8, "application/xml");
 
                     // Send the POST request
-                    var response = await client.PostAsync(this.settings.Value.TempusUri, content);
+                    var response = await client.PostAsync(this.settings.Value.TempusUri, content, tokenToCancel.CancellationTokenSource.Token);
 
                     if (response.IsSuccessStatusCode)
                     {
@@ -177,10 +193,10 @@ namespace tempus.service.core.api.Services.POSTempus
                             tempusResponse = (CorcentricTempusPaymentResponse)serializer.Deserialize(reader);
 
                             //if error then don't Generate the signature
-                            if(tempusResponse != null && tempusResponse.TRANRESP != null && !string.IsNullOrEmpty(tempusResponse.TRANRESP.SIGDATA))
+                            if (tempusResponse != null && tempusResponse.TRANRESP != null && !string.IsNullOrEmpty(tempusResponse.TRANRESP.SIGDATA))
                             {
                                 tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
-                            }                            
+                            }
                         }
                     }
                     else
@@ -188,13 +204,107 @@ namespace tempus.service.core.api.Services.POSTempus
                         this.logger.LogError($"{functionName} ERROR - {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {response.StatusCode}");
                     }
                 }
+                catch (TaskCanceledException ex)
+                {
+                    // This exception is thrown if the task was canceled
+                    tempusResponse.ResponseMessage = $"ERROR: {ex.Message}";
+                    this.logger.LogError($"Http call canceled to get signature :: EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                }
                 catch (Exception ex)
                 {
                     this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
                 }
+                finally
+                {
+                    this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+                }
             }
 
             return tempusResponse;
+        }
+
+        private List<SignatureTokenCancellation> SetTokenCachedList(CorcentricTempusPaymentRequest tempusReq, string cacheKey)
+        {
+            var tokenCancellationList = new List<SignatureTokenCancellation>();
+            if (!cache.TryGetValue(cacheKey, out tokenCancellationList))
+            {
+                tokenCancellationList = new List<SignatureTokenCancellation>();
+                var newToken = new SignatureTokenCancellation
+                {
+                    SubscriberKey = tempusReq.AUTHINFO.SUBSCRIBERKEY,
+                    CancellationTokenSource = new CancellationTokenSource()
+                };
+                tokenCancellationList.Add(newToken);
+
+                cache.Set(cacheKey, tokenCancellationList, TimeSpan.FromHours(1));
+            }
+            else
+            {
+                //the tokenList exist but check if existing SubscriberKey
+                var ix = tokenCancellationList.FindIndex(t => t.SubscriberKey == tempusReq.AUTHINFO.SUBSCRIBERKEY);
+                if (ix != -1)
+                {
+                    //replace the existing token for the new request
+                    tokenCancellationList[ix] = new SignatureTokenCancellation
+                    {
+                        SubscriberKey = tempusReq.AUTHINFO.SUBSCRIBERKEY,
+                        CancellationTokenSource = new CancellationTokenSource()
+                    };
+                }
+                //is not on the list, so add it
+                else
+                {
+                    tokenCancellationList.Add(new SignatureTokenCancellation
+                    {
+                        SubscriberKey = tempusReq.AUTHINFO.SUBSCRIBERKEY,
+                        CancellationTokenSource = new CancellationTokenSource()
+                    });
+                }
+
+                cache.Set(cacheKey, tokenCancellationList, TimeSpan.FromHours(1));
+            }
+
+            return tokenCancellationList;
+        }
+
+        public async Task<PosFiltersModel> CancelHttpClientRequest(PosFiltersModel filter)
+        {
+            var functionName = "CancelHttpClientRequest";
+            List<SignatureTokenCancellation>? tokenCancellationList;
+            var cacheKey = "SignatureCancellationTokenList";
+
+
+
+            try
+            {
+                if (!cache.TryGetValue(cacheKey, out tokenCancellationList))
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Cancellation token does not exist for: {filter.SubscriberKey}");
+                }
+                else
+                {
+                    //tokenList does exist now look for the token to cancel http request by SubscriberKey
+                    var tokenToCancel = tokenCancellationList.Find(t => t.SubscriberKey == filter.SubscriberKey);
+                    if (tokenToCancel != null)
+                    {
+                        //now that you have the token, cancel it
+                        tokenToCancel.CancellationTokenSource.Cancel();
+                        tokenCancellationList.Remove(tokenToCancel);
+                        this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Token cancelled SubscriberKey: {filter.SubscriberKey}.");
+                    }
+                }
+                
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return await Task.FromResult(filter);
         }
 
         public async Task<string> GenerateSignature(string sigdata, string fileName)
@@ -265,6 +375,10 @@ namespace tempus.service.core.api.Services.POSTempus
             catch (Exception ex)
             {
                 this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
             }
 
             return await Task.FromResult(filePath);
@@ -405,10 +519,67 @@ namespace tempus.service.core.api.Services.POSTempus
                 {
                     this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
                 }
+                finally
+                {
+                    this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+                }
             }
 
             return tempusResponse;
         }
+
+        public async Task<InteractiveCancelTempusResponse> InteractiveCancelTempusMethods_Select(InteractiveCancelTempusRequest tempusReq)
+        {
+            var tempusResponse = new InteractiveCancelTempusResponse();
+            var functionName = "InteractiveCancelTempusMethods_Select";
+
+            using (var client = new HttpClient())
+            {
+                try
+                {
+                    // Serialize the object to XML
+                    string payload = SerializeToXml(tempusReq);
+
+                    XDocument document = XDocument.Parse(payload);
+                    var rootElements = document.Root.Elements();
+                    XDocument newDoc = new XDocument(new XElement("TTMESSAGE", rootElements));
+                    payload = newDoc.ToString();
+
+                    // Create the request content
+                    var content = new StringContent(payload, Encoding.UTF8, "application/xml");
+
+                    // Send the POST request
+                    var response = await client.PostAsync(this.settings.Value.TempusUri, content);
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        // Read response as string
+                        var responseString = await response.Content.ReadAsStringAsync();
+
+                        // Deserialize the XML response into the C# class
+                        var serializer = new XmlSerializer(typeof(InteractiveCancelTempusResponse));
+                        using (var reader = new StringReader(responseString))
+                        {
+                            tempusResponse = (InteractiveCancelTempusResponse)serializer.Deserialize(reader);                           
+                        }
+                    }
+                    else
+                    {
+                        this.logger.LogError($"{functionName} ERROR - {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {response.StatusCode}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                }
+                finally
+                {
+                    this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+                }
+            }
+
+            return tempusResponse;
+        }        
     }
 
 }

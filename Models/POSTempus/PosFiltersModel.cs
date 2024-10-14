@@ -2,6 +2,8 @@
 {
     public class PosFiltersModel : BaseModel
     {
-        public string SalesNo { get; set; }
+        public string? SalesNo { get; set; }
+
+        public string? SubscriberKey { get; set; }
     }
 }

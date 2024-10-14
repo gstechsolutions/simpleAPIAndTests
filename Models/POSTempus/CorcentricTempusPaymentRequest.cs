@@ -14,6 +14,8 @@ namespace tempus.service.core.api.Models.POSTempus
 
         [XmlElement("TRANSACTION")]
         public Transaction TRANSACTION { get; set; }
+
+        public CancellationTokenSource CancellationToken { get; set; }
     }
 
     public class AuthInfo
@@ -33,8 +35,8 @@ namespace tempus.service.core.api.Models.POSTempus
         [XmlElement("TRANSACTIONTYPE")]
         public string TRANSACTIONTYPE { get; set; }
 
-        [XmlElement("LEGALTEXT")]
-        public string LEGALTEXT { get; set; }
+        //[XmlElement("LEGALTEXT")]
+        //public string LEGALTEXT { get; set; }
 
         [XmlElement("SIGTYPE")]
         public string SIGTYPE { get; set; }
