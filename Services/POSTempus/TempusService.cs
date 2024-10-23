@@ -604,17 +604,6 @@ namespace tempus.service.core.api.Services.POSTempus
 
                 var hostList = this.mapper.Map<List<POSDeviceConfigurationHostName>, List<POSDeviceConfigurationHostNameModel>>(list);
 
-                //from the aliasList get the default one and 
-                //tempusConfigList = await context.POSConfigurations.Join(context.POSDeviceConfigurations,
-                //    c => new { c.CompanyID, c.CompanyDepartmentID },
-                //    dc => new { dc.CompanyID, dc.CompanyDepartmentID },
-                //    (c, dc) => new TempusDeviceConfigurationModel
-                //    {
-                //        RNID = c.RNID,
-                //        RNCert = c.RNCert,
-                //        Subscriberkey = dc.Subscriberkey
-                //    }).ToListAsync();
-
                 if (hostList != null)
                 {
                     var emp = await context.Employees.Where(e => e.EmployeeID == filters.EmployeeID).FirstOrDefaultAsync();
