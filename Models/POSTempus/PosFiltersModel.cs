@@ -5,5 +5,9 @@
         public string? SalesNo { get; set; }
 
         public string? SubscriberKey { get; set; }
+
+        public string? HostName { get; set; }
+
+        public long? EmployeeID { get; set; }
     }
 }

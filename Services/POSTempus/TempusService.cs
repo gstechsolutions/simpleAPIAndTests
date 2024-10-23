@@ -197,6 +197,10 @@ namespace tempus.service.core.api.Services.POSTempus
                             {
                                 tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
                             }
+                            else if ((bool)(tempusResponse.TTMSGTRANSUCCESS?.ToLower().Equals("false")))
+                            {
+                                tempusResponse.ResponseMessage = $"Error processing signature";
+                            }
                         }
                     }
                     else
@@ -579,7 +583,123 @@ namespace tempus.service.core.api.Services.POSTempus
             }
 
             return tempusResponse;
-        }        
+        }
+
+        public async Task<List<POSDeviceConfigurationModel>> GetPOSDeviceConfigurationByHostName(PosFiltersModel filters)
+        {
+            var functionName = "GetPOSDeviceConfigurationByHostName";
+            var tempusConfigList = new List<TempusDeviceConfigurationModel>();      
+            var tempusIncludeList = new List<POSDeviceConfigurationModel>();
+
+            try
+            {
+                //execute the SP [POSDeviceConfigurationHostName_Select] with arguments hostName and EmpID,
+                //that will return {POSDeviceConfigurationID	DeviceAlias	IsDefault}
+                //and based on the default DeviceAlias for this user belonging to a company and department
+                //select all the config setting using the alias.  use the two entities created POSConfiguration
+                //and POSDeviceConfiguration
+                var list = await context.POSDeviceConfigurationHostNames.FromSqlRaw("EXEC [dbo].[POSDeviceConfigurationHostName_Select] @HostName, @EmployeeID",
+                          new SqlParameter("@HostName", filters.HostName),
+                          new SqlParameter("@EmployeeID", filters.EmployeeID)).ToListAsync();
+
+                var hostList = this.mapper.Map<List<POSDeviceConfigurationHostName>, List<POSDeviceConfigurationHostNameModel>>(list);
+
+                //from the aliasList get the default one and 
+                //tempusConfigList = await context.POSConfigurations.Join(context.POSDeviceConfigurations,
+                //    c => new { c.CompanyID, c.CompanyDepartmentID },
+                //    dc => new { dc.CompanyID, dc.CompanyDepartmentID },
+                //    (c, dc) => new TempusDeviceConfigurationModel
+                //    {
+                //        RNID = c.RNID,
+                //        RNCert = c.RNCert,
+                //        Subscriberkey = dc.Subscriberkey
+                //    }).ToListAsync();
+
+                if (hostList != null)
+                {
+                    var emp = await context.Employees.Where(e => e.EmployeeID == filters.EmployeeID).FirstOrDefaultAsync();
+
+                    if (emp != null)
+                    {
+                        var resultWithNavProp = await context.POSDeviceConfigurations
+                            .Where(dc => dc.CompanyID == emp.HomeCompanyID && dc.CompanyDepartmentID == emp.HomeCompanyDepartmentID && dc.Active == 1)
+                            .Include(dc => dc.POSConfiguration)
+                            .ToListAsync();
+
+                        if (resultWithNavProp != null)
+                        {
+                            tempusIncludeList = mapper.Map<List<POSDeviceConfiguration>, List<POSDeviceConfigurationModel>>(resultWithNavProp);
+                            //set the default one
+                            var includeDefault = tempusIncludeList.Where(dc => dc.HostName.ToLower().Equals(filters.HostName?.ToLower())).FirstOrDefault();
+                            if (includeDefault != null)
+                            {
+                                includeDefault.IsDefault = 1;
+                            }
+                        }
+                    }
+                    var success = true;
+                }                
+            }
+            catch (Exception ex)
+            {
+                var error = new TempusDeviceConfigurationModel();
+                error.SetError(ex.Message);
+                tempusConfigList.Add(error);
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+                }
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return tempusIncludeList;
+        }
+
+        public async Task<POSDeviceConfigurationModel> SetPOSDeviceInLoginDetails(POSDeviceConfigurationModel model)
+        {
+            var functionName = "SetPOSDeviceInLoginDetails";            
+
+            try
+            {
+                var detailsToUpdate = await context.POSLoginDetails
+                    .Where(det => det.EmpID == model.EmpID)
+                    .OrderByDescending(det => det.LoginDateTime)
+                    .Take(1)
+                    .FirstOrDefaultAsync();
+
+                //only update POSLoginDetails if loginStatus == 1 and LogoutDateTime is null
+                if (detailsToUpdate != null && detailsToUpdate.LoginStatus && !detailsToUpdate.LogoutDateTime.HasValue)
+                {
+                    detailsToUpdate.DeviceAlias = model.DeviceAlias;
+                    detailsToUpdate.POSDeviceConfigurationID = model.POSDeviceConfigurationID;
+                    // Save the changes to the database
+                    await context.SaveChangesAsync();
+
+                    this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Successfully updated POSLoginDetails for EmpID {model.EmpID}.");
+                }
+
+            }
+            catch (Exception ex)
+            {
+                model.SetError(ex.Message);
+
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+                }
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return model;
+        }
     }
 
 }

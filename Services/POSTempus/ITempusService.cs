@@ -26,5 +26,10 @@ namespace tempus.service.core.api.Services.POSTempus
         Task<InteractiveCancelTempusResponse> InteractiveCancelTempusMethods_Select(InteractiveCancelTempusRequest tempusReq);
 
         Task<PosFiltersModel> CancelHttpClientRequest(PosFiltersModel filters);
+
+        Task<List<POSDeviceConfigurationModel>> GetPOSDeviceConfigurationByHostName(PosFiltersModel filters);
+
+        Task<POSDeviceConfigurationModel> SetPOSDeviceInLoginDetails(POSDeviceConfigurationModel model);
+
     }
 }

@@ -16,7 +16,7 @@ namespace tempus.service.core.api.Data
             {
                 IConfigurationRoot configuration = new ConfigurationBuilder()
                    .SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.Development.json")
+                   .AddJsonFile("appsettings.json")
                    .Build();
 
                 var connectionString = configuration.GetConnectionString("STRDMSDB");
@@ -35,5 +35,16 @@ namespace tempus.service.core.api.Data
         public DbSet<PosInvoice> POSInvoices { get; set; }
 
         public DbSet<SISPosInvoice> SISPOSInvoices { get; set; }
+
+        public DbSet<POSConfiguration> POSConfigurations { get; set; }
+
+        public DbSet<POSDeviceConfiguration> POSDeviceConfigurations { get; set; }
+
+        public DbSet<POSDeviceConfigurationHostName> POSDeviceConfigurationHostNames { get; set; }
+
+        public DbSet<Employee> Employees { get; set; }
+
+        public DbSet<POSLoginDetail> POSLoginDetails { get; set; }
+        
     }
 }

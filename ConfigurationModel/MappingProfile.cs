@@ -26,6 +26,14 @@ namespace tempus.service.core.api.ConfigurationModel
 
             this.CreateMap<SISPosInvoice, PosInvoiceModel>()
                 ;
+            this.CreateMap<POSDeviceConfigurationHostName, POSDeviceConfigurationHostNameModel>()
+                ;
+
+            this.CreateMap<POSConfiguration, POSConfigurationModel>()
+                ;
+
+            this.CreateMap<POSDeviceConfiguration, POSDeviceConfigurationModel>()
+                ;
         }
     }
 }
