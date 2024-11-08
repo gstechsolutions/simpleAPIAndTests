@@ -5,8 +5,6 @@ VisualStudioVersion = 17.11.35222.181
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "tempus.service.core.api", "tempus.service.core.api.csproj", "{C2AAF0B6-81C2-4DD9-8FC5-AD8878800249}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "..\Users\jgsal\source\repos\TestProject1\TestProject1.csproj", "{C96FEB45-ADE8-4BF7-81C1-BDE907943290}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -17,10 +15,6 @@ Global
 		{C2AAF0B6-81C2-4DD9-8FC5-AD8878800249}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C2AAF0B6-81C2-4DD9-8FC5-AD8878800249}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C2AAF0B6-81C2-4DD9-8FC5-AD8878800249}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C96FEB45-ADE8-4BF7-81C1-BDE907943290}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C96FEB45-ADE8-4BF7-81C1-BDE907943290}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C96FEB45-ADE8-4BF7-81C1-BDE907943290}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C96FEB45-ADE8-4BF7-81C1-BDE907943290}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
