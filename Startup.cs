@@ -99,7 +99,8 @@ namespace tempus.service.core.api
             var dbServer = Configuration["DBSERVER"];
             var dbName = Configuration["DBNAME"];
             var dbUser = Configuration["DBUSER"];
-            var dbPwd = EncryptDecrypt.Decrypt(Configuration["DBPASSWORD"]);
+            //var dbPwd = EncryptDecrypt.Decrypt(Configuration["DBPASSWORD"]);
+            var dbPwd = (Configuration["DBPASSWORD"]);
 
             return string.Format(dbConn, dbName, dbServer, dbUser, dbPwd);
         }

@@ -16,6 +16,10 @@ namespace tempus.service.core.api.Models.POSTempus
         public Transaction TRANSACTION { get; set; }
 
         public CancellationTokenSource CancellationToken { get; set; }
+
+        //public string ScreenType { get; set; }
+
+        //public string InvoiceNumber { get; set; }
     }
 
     public class AuthInfo

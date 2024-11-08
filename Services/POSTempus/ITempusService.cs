@@ -31,5 +31,7 @@ namespace tempus.service.core.api.Services.POSTempus
 
         Task<POSDeviceConfigurationModel> SetPOSDeviceInLoginDetails(POSDeviceConfigurationModel model);
 
+        Task<POSLoginDetailsModel> GetLoginDetailsByUser(PosFiltersModel model);
+
     }
 }

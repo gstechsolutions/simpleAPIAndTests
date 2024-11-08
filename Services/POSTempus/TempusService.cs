@@ -25,7 +25,13 @@ namespace tempus.service.core.api.Services.POSTempus
         private readonly IMapper mapper;
         private readonly IOptions<ServiceCoreSettings> settings;
         private readonly IClock clock;
-        private readonly IMemoryCache cache;        
+        private readonly IMemoryCache cache;
+        private string InvoiceNumber;
+        private string? POSImagePath;
+        private string? AttachmentPath;
+        private string SignatureScanImagePath;
+
+        public string ScreenType { get; private set; }
 
         public TempusService(STRDMSContext context,
             ILogger<TempusService> logger,
@@ -124,7 +130,7 @@ namespace tempus.service.core.api.Services.POSTempus
                         var serializer = new XmlSerializer(typeof(PaymentTempusMethodResponse));
                         using (var reader = new StringReader(responseString))
                         {
-                            tempusResponse = (PaymentTempusMethodResponse)serializer.Deserialize(reader);
+                            tempusResponse = (PaymentTempusMethodResponse)serializer.Deserialize(reader);                            
                             tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
                         }
                     }
@@ -195,7 +201,11 @@ namespace tempus.service.core.api.Services.POSTempus
                             //if error then don't Generate the signature
                             if (tempusResponse != null && tempusResponse.TRANRESP != null && !string.IsNullOrEmpty(tempusResponse.TRANRESP.SIGDATA))
                             {
+                                //this will palce it in the C:\\
                                 tempusResponse.FILENAME = await GenerateSignature(tempusResponse.TRANRESP.SIGDATA, tempusResponse.SESSIONID);
+
+                                //now save it in the shared folder in network drive
+
                             }
                             else if ((bool)(tempusResponse.TTMSGTRANSUCCESS?.ToLower().Equals("false")))
                             {
@@ -358,6 +368,12 @@ namespace tempus.service.core.api.Services.POSTempus
                         }
                     }
 
+
+                    
+                    //see if you  can save the signature bmp in the SIP, SIS in the netwrok folder
+                    //this is the filePath needs to be generated to save signature images to shared folder
+                    //his  is the one will setup the path private string SignatureSetPath()
+                    //"\\\\SSDEV01\\PHOENIXATTACH\\FRONTCOUNTER\\SIP00000000\\SIP04000000\\SIP04200000\\SIP04200000\\SIP04200000\\SIP04200608\\SIP-010-50-04200608_ef07f76d-9b1c-4017-8482-a4572514094c_20241028084145-Signature.BMP"
                     // Check if the directory exists
                     if (!Directory.Exists(dirSigPath))
                     {
@@ -371,7 +387,7 @@ namespace tempus.service.core.api.Services.POSTempus
                     {
                         bmp.Save(filePath);
                         success = true; // Ensure no issues with file access here
-                    }
+                    }                    
                 }
                 // Parse the sigdata into a list of points
                
@@ -386,6 +402,79 @@ namespace tempus.service.core.api.Services.POSTempus
             }
 
             return await Task.FromResult(filePath);
+        }
+
+        //this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}"); 
+        private bool SaveTempusSignature(string path, CorcentricTempusPaymentRequest req)
+        {
+            var result = false;
+            var filePath = string.Empty;
+            try
+            {
+
+                filePath = path;
+                this.logger.LogInformation($"[Signature TempPath]= {filePath}");
+
+
+                //Im getting all the signature info from the file because the byte[] payguardian gives in the response has incorrect format
+                //SignatureString = filePath.ToBMPStringFromFilePath(); //resp.data.ExtData.signatureResponseDTO.sigBytes;
+
+                SignatureScanImagePath = SignatureSetPath(req);
+                this.logger.LogInformation($"[Signature Path] = {SignatureScanImagePath}");
+
+                //filePath.ToImage().Save(vm.SignatureScanImagePath);//SAVE
+
+                //var file = filePath.ToFileInfo();
+
+                //return System.Drawing.Image.FromFile(file.FullName);
+
+
+
+                //result = File.Exists(vm.SignatureScanImagePath);
+
+                //vm.SignatureScanImage = filePath.ToImageResourceFromFilePath(); //Binded on the Screen
+            }
+            catch (Exception ex)
+            {
+                logger.LogInformation("Error saving signature", ex);
+                //SignatureVoidFromViewmodel();
+            }
+            return result;
+        }
+
+        private string SignatureSetPath(CorcentricTempusPaymentRequest req)
+        {
+            var filename = "";
+
+            filename = $"{DateTime.Now.ToString("yyyyMMddHHmmss")}-Signature.BMP";
+
+
+            return GetPOSImageFullFileName(filename, req);
+        }
+
+        public string GetPOSImageFullFileName(string filename, CorcentricTempusPaymentRequest req)
+        {
+            var functionName = "GetPOSImageFullFileName";
+            var FullFileName = String.Empty;
+            BatchServicePath cs = BatchServicePath.Instance;
+            try
+            {
+                FullFileName = cs.GenaratingPath(ScreenType, InvoiceNumber, filename, DocumentType.NumberAndLetter);
+
+                POSImagePath = Path.GetDirectoryName(FullFileName);                
+
+                AttachmentPath = POSImagePath;                
+
+                if (!Directory.Exists(POSImagePath))
+                {
+                    Directory.CreateDirectory(POSImagePath);
+                }
+            }
+            catch (Exception ex)
+            {
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");                
+            }
+            return FullFileName;
         }
 
         private static string SerializeToXml<T>(T obj)
@@ -688,6 +777,41 @@ namespace tempus.service.core.api.Services.POSTempus
             }
 
             return model;
+        }
+
+        public async Task<POSLoginDetailsModel> GetLoginDetailsByUser(PosFiltersModel model)
+        {
+            var functionName = "GetLoginDetailsByUser";
+            var loginDetails = new POSLoginDetailsModel();
+            try
+            {
+                var loginDetailsEntity = await context.POSLoginDetails
+                    .Where(det => det.EmpID == model.EmployeeID)
+                    .OrderByDescending(det => det.LoginDateTime)
+                    .Take(1)
+                    .FirstOrDefaultAsync();
+
+                if (loginDetailsEntity != null)
+                    loginDetails = mapper.Map<POSLoginDetail, POSLoginDetailsModel>(loginDetailsEntity);
+
+
+            }
+            catch (Exception ex)
+            {
+                loginDetails.SetError(ex.Message);
+
+                this.logger.LogError($"{functionName} EXCEPTION- {clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    this.logger.LogError($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: {ex.InnerException.Message}");
+                }
+            }
+            finally
+            {
+                this.logger.LogInformation($"{clock.GetCurrentInstant().ToDateTimeUtc().ToLocalTime()}: Exited {functionName}.");
+            }
+
+            return loginDetails;
         }
     }
 

@@ -16,14 +16,15 @@ namespace tempus.service.core.api.Data
             {
                 IConfigurationRoot configuration = new ConfigurationBuilder()
                    .SetBasePath(Directory.GetCurrentDirectory())
-                   .AddJsonFile("appsettings.json")
+                   .AddJsonFile("appsettings.Development.json")
                    .Build();
 
                 var connectionString = configuration.GetConnectionString("STRDMSDB");
 
                 var builder = new SqlConnectionStringBuilder(connectionString)
                 {
-                    Password = EncryptDecrypt.Decrypt(configuration["DBPASSWORD"])
+                    //Password = EncryptDecrypt.Decrypt(configuration["DBPASSWORD"])
+                    Password = (configuration["DBPASSWORD"])
                 };
 
                 optionsBuilder.UseSqlServer(builder.ConnectionString);

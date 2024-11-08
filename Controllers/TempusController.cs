@@ -107,8 +107,6 @@ namespace tempus.service.core.api.Controllers
             var response = await service.GetPOSDeviceConfigurationByHostName(filter);
             return Ok(response);
         }
-        //GetPOSDeviceConfigurationByHostName
-        //public async Task<POSDeviceConfigurationModel> SetPOSDeviceInLoginDetails(PosFiltersModel filters)
 
         [HttpPost]
         [Route("api/tempus/set/device")]
@@ -117,6 +115,16 @@ namespace tempus.service.core.api.Controllers
         public async Task<IActionResult> SetPOSDeviceInLoginDetails([FromBody] POSDeviceConfigurationModel filter)
         {
             var response = await service.SetPOSDeviceInLoginDetails(filter);
+            return Ok(response);
+        }
+
+        [HttpPost]
+        [Route("api/tempus/login/details")]
+        [SwaggerOperation(OperationId = "GetLoginDetailsByUser")]
+        [SwaggerResponse(statusCode: 200, type: typeof(POSLoginDetailsModel), description: "Used to get login details by empId")]
+        public async Task<IActionResult> GetLoginDetailsByUser([FromBody] PosFiltersModel filter)
+        {
+            var response = await service.GetLoginDetailsByUser(filter);
             return Ok(response);
         }
     }

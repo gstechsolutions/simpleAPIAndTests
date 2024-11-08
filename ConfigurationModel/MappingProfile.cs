@@ -34,6 +34,9 @@ namespace tempus.service.core.api.ConfigurationModel
 
             this.CreateMap<POSDeviceConfiguration, POSDeviceConfigurationModel>()
                 ;
+
+            this.CreateMap<POSLoginDetail, POSLoginDetailsModel>()
+                ;
         }
     }
 }
